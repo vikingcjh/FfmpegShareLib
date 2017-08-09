@@ -5,10 +5,32 @@
 
 cmake_minimum_required(VERSION 3.4.1)
 
+set(lib_ffmpeg_DIR ${CMAKE_SOURCE_DIR}/src/main/jniLibs/armeabi)
+include_directories(
+     ${CMAKE_SOURCE_DIR}/src/main/cpp/include
+)
+
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
+
+add_library(avcodec-57_lib SHARED IMPORTED)
+set_target_properties(avcodec-57_lib PROPERTIES IMPORTED_LOCATION
+                          ${lib_ffmpeg_DIR}/libavcodec-57.so)
+add_library(avformat-57_lib SHARED IMPORTED)
+set_target_properties(avformat-57_lib PROPERTIES IMPORTED_LOCATION
+                     ${lib_ffmpeg_DIR}/libavformat-57.so)
+add_library(avutil-55_lib SHARED IMPORTED)
+set_target_properties(avutil-55_lib PROPERTIES IMPORTED_LOCATION
+                     ${lib_ffmpeg_DIR}/libavutil-55.so)
+add_library(swresample-2_lib SHARED IMPORTED)
+set_target_properties(swresample-2_lib PROPERTIES IMPORTED_LOCATION
+                     ${lib_ffmpeg_DIR}/libswresample-2.so)
+add_library(swscale-4_lib SHARED IMPORTED)
+set_target_properties(swscale-4_lib PROPERTIES IMPORTED_LOCATION
+                     ${lib_ffmpeg_DIR}/libswscale-4.so)
+
 
 add_library( # Sets the name of the library.
              native-lib
@@ -38,7 +60,12 @@ find_library( # Sets the name of the path variable.
 
 target_link_libraries( # Specifies the target library.
                        native-lib
-
+                       android
                        # Links the target library to the log library
                        # included in the NDK.
-                       ${log-lib} )
+                       ${log-lib}
+                       avcodec-57_lib
+                       avformat-57_lib
+                       avutil-55_lib
+                       swresample-2_lib
+                       swscale-4_lib)
