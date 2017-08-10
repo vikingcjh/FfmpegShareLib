@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.widget.TextView;
 
+import com.soul.learn.ffmpegsharelib.jniUtils.YuvUtils;
+
 public class MainActivity extends Activity {
 
     // Used to load the 'native-lib' library on application startup.
@@ -19,6 +21,7 @@ public class MainActivity extends Activity {
         // Example of a call to a native method
         TextView tv = (TextView) findViewById(R.id.sample_text);
         tv.setText(stringFromJNI());
+        tv.setText(new String(YuvUtils.Yuv444Split()));
     }
 
     /**
