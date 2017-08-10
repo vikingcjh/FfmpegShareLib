@@ -8,6 +8,7 @@ cmake_minimum_required(VERSION 3.4.1)
 set(lib_ffmpeg_DIR ${CMAKE_SOURCE_DIR}/src/main/jniLibs/armeabi)
 include_directories(
      ${CMAKE_SOURCE_DIR}/src/main/cpp/include
+     ${CMAKE_SOURCE_DIR}/src/main/cpp
 )
 
 # 查找所有源码 并拼接到路径列表
