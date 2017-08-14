@@ -13,6 +13,7 @@ include_directories(
 
 # 查找所有源码 并拼接到路径列表
 aux_source_directory(src/main/cpp SRC_LIST)
+
 # aux_source_directory(src/main/cpp/smart CORE_SRC_LIST)
 # list(APPEND SRC_LIST ${CORE_SRC_LIST})
 
