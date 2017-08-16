@@ -7,15 +7,17 @@ cmake_minimum_required(VERSION 3.4.1)
 
 set(lib_ffmpeg_DIR ${CMAKE_SOURCE_DIR}/src/main/jniLibs/armeabi)
 include_directories(
+     ${CMAKE_SOURCE_DIR}/src/main/cpp/ffmpegUtil
      ${CMAKE_SOURCE_DIR}/src/main/cpp/include
      ${CMAKE_SOURCE_DIR}/src/main/cpp
+
+
 )
 
 # 查找所有源码 并拼接到路径列表
 aux_source_directory(src/main/cpp SRC_LIST)
-
-# aux_source_directory(src/main/cpp/smart CORE_SRC_LIST)
-# list(APPEND SRC_LIST ${CORE_SRC_LIST})
+aux_source_directory(src/main/cpp/ffmpegUtil CORE_SRC_LIST)
+list(APPEND SRC_LIST ${CORE_SRC_LIST})
 
 # Creates and names a library, sets it as either STATIC
 # or SHARED, and provides the relative paths to its source code.

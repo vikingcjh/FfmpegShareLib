@@ -1,0 +1,8 @@
+//
+// Created by chenjianhua on 2017/8/14.
+//
+
+#ifndef FFMPEGSHARELIB_H264ENCODE_H
+#define FFMPEGSHARELIB_H264ENCODE_H
+
+#endif //FFMPEGSHARELIB_H264ENCODE_H
