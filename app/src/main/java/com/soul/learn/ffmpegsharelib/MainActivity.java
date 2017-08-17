@@ -46,7 +46,8 @@ public class MainActivity extends Activity {
                 String folderurl= Environment.getExternalStorageDirectory().getPath();
 
                 String urltext_input=urlEdittext_input.getText().toString();
-                urltext_input = "045.flv";
+//                urltext_input = "045.flv";
+                urltext_input = "113.mp4";
                 String inputurl=folderurl+"/aaa/"+urltext_input;
 
                 String outputurl=urlEdittext_output.getText().toString();
