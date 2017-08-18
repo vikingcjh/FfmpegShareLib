@@ -2,6 +2,7 @@ package com.soul.learn.ffmpegsharelib;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
@@ -15,15 +16,17 @@ import android.widget.Toast;
 
 import com.soul.learn.ffmpegsharelib.jniUtils.FfmpegStreamUtils;
 import com.soul.learn.ffmpegsharelib.jniUtils.YuvUtils;
+import com.soul.learn.ffmpegsharelib.ui.LiveActivity;
 
 public class MainActivity extends Activity {
 
     // Used to load the 'native-lib' library on application startup.
-    static {
+    /*static {
         System.loadLibrary("native-lib");
-    }
+    }*/
 
     private String ip;
+    private boolean isRunning = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +46,23 @@ public class MainActivity extends Activity {
         startButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View arg0){
 
-                String folderurl= Environment.getExternalStorageDirectory().getPath();
+                Intent intent = new Intent(MainActivity.this, LiveActivity.class);
+                startActivity(intent);
+                /*new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isRunning) {
+                            return;
+                        }
+                        isRunning = true;
+                        String outputurl = "rtmp://" + "10.87.100.107"+":1935" + "/live/livestream";
+                        Log.i("niodata", outputurl);
+                        FfmpegStreamUtils.muxing(outputurl);
+                        isRunning = false;
+                    }
+                }).start();*/
+
+                /*String folderurl= Environment.getExternalStorageDirectory().getPath();
 
                 String urltext_input=urlEdittext_input.getText().toString();
 //                urltext_input = "045.flv";
@@ -59,7 +78,7 @@ public class MainActivity extends Activity {
 
                 FfmpegStreamUtils.stream(inputurl,outputurl);
 
-                Log.e("Info",info);
+                Log.e("Info",info);*/
             }
         });
 

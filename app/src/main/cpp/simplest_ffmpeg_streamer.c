@@ -49,7 +49,6 @@ void custom_log(void *ptr, int level, const char* fmt, va_list vl){
     //LOGE(fmt, vl);
 }
 
-//extern "C"
 JNIEXPORT jint JNICALL Java_com_soul_learn_ffmpegsharelib_jniUtils_FfmpegStreamUtils_stream
         (JNIEnv *env, jobject obj, jstring input_jstr, jstring output_jstr)
 {

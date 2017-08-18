@@ -1,12 +1,19 @@
 
-#include "muxing.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
 
-#define LOGE(format, ...)  __android_log_print(ANDROID_LOG_ERROR, "(>_<)", format, ##__VA_ARGS__)
-#define LOGI(format, ...)  __android_log_print(ANDROID_LOG_INFO,  "(^_^)", format, ##__VA_ARGS__)
-#define LOGI2(format, ...)  __android_log_print(ANDROID_LOG_INFO,  "NIODATA", format, ##__VA_ARGS__)
+#include <libavutil/avassert.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/opt.h>
+#include <libavutil/mathematics.h>
+#include <libavutil/timestamp.h>
+#include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
 
-
-#define STREAM_DURATION   10.0
+#define STREAM_DURATION   20.0
 #define STREAM_FRAME_RATE 25 /* 25 images/s */
 #define STREAM_PIX_FMT    AV_PIX_FMT_YUV420P /* default pix_fmt */
 
@@ -34,7 +41,7 @@ static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
 {
     AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
 
-    LOGI2("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
+    printf("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
            av_ts2str(pkt->pts), av_ts2timestr(pkt->pts, time_base),
            av_ts2str(pkt->dts), av_ts2timestr(pkt->dts, time_base),
            av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, time_base),
@@ -514,7 +521,7 @@ static void close_stream(AVFormatContext *oc, OutputStream *ost)
 /**************************************************************/
 /* media file output */
 
-int mux(char *outputfilename)
+int mux2()
 {
     OutputStream video_st = { 0 }, audio_st = { 0 };
     const char *filename;
@@ -527,29 +534,22 @@ int mux(char *outputfilename)
     AVDictionary *opt = NULL;
     int i;
 
-
     /* Initialize libavcodec, and register all codecs and formats. */
     av_register_all();
 
-    //Network
-    avformat_network_init();
 
-//    filename = "xyxz.flv";
-    filename = outputfilename;
+    filename = "xyxz.flv";
 
 
-    LOGI("111111111111");
     /* allocate the output media context */
-//    avformat_alloc_output_context2(&oc, NULL, NULL, filename);
-    avformat_alloc_output_context2(&oc, NULL, "flv",outputfilename);
+    avformat_alloc_output_context2(&oc, NULL, NULL, filename);
     if (!oc) {
-        LOGI2("Could not deduce output format from file extension: using MPEG.\n");
-        avformat_alloc_output_context2(&oc, NULL, "mpeg", outputfilename);
+        printf("Could not deduce output format from file extension: using MPEG.\n");
+        avformat_alloc_output_context2(&oc, NULL, "mpeg", filename);
     }
     if (!oc)
         return 1;
 
-    LOGI("222222222222");
     fmt = oc->oformat;
 
     /* Add the audio and video streams using the default format codecs
@@ -585,8 +585,6 @@ int mux(char *outputfilename)
         }
     }
 
-    LOGI("3333333");
-
     /* Write the stream header, if any. */
     ret = avformat_write_header(oc, &opt);
     if (ret < 0) {
@@ -595,7 +593,6 @@ int mux(char *outputfilename)
         return 1;
     }
 
-    LOGI("444444");
     while (encode_video || encode_audio) {
         /* select the stream to encode */
         if (encode_video &&
@@ -607,14 +604,12 @@ int mux(char *outputfilename)
         }
     }
 
-    LOGI("5555555");
     /* Write the trailer, if any. The trailer must be written before you
      * close the CodecContexts open when you wrote the header; otherwise
      * av_write_trailer() may try to use memory that was freed on
      * av_codec_close(). */
     av_write_trailer(oc);
 
-    LOGI("666666");
     /* Close each codec. */
     if (have_video)
         close_stream(oc, &video_st);

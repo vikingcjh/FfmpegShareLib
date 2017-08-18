@@ -6,4 +6,6 @@ package com.soul.learn.ffmpegsharelib.jniUtils;
 
 public class FfmpegStreamUtils {
     public static native int stream(String filePath,String outputPath);
+
+    public static native int muxing(String outputPath);
 }
