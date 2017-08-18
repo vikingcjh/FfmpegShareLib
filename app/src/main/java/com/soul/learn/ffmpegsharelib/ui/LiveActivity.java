@@ -39,9 +39,9 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
     private int channelConfig = AudioFormat.CHANNEL_IN_STEREO;//CHANNEL_IN_STEREO//CHANNEL_IN_MONO
     private int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
 
-    static {
-        System.loadLibrary("native-lib");
-    }
+//    static {
+//        System.loadLibrary("native-lib");
+//    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -186,7 +186,7 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
                     int size = record.read(bb, 0,bufferSize);
                     if(size >0){
 
-                        StreamHelper.sendAudio(bb, size);
+//                        StreamHelper.sendAudio(bb, size);
                     }
             }
             if(record.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING){

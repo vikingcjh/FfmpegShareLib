@@ -21,9 +21,9 @@ import com.soul.learn.ffmpegsharelib.ui.LiveActivity;
 public class MainActivity extends Activity {
 
     // Used to load the 'native-lib' library on application startup.
-    /*static {
+    static {
         System.loadLibrary("native-lib");
-    }*/
+    }
 
     private String ip;
     private boolean isRunning = false;

@@ -147,7 +147,7 @@ static void add_stream(OutputStream *ost, AVFormatContext *oc,
             ost->st->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
             c->time_base       = ost->st->time_base;
 
-            c->gop_size      = 12;//12; /* emit one intra frame every twelve frames at most */
+            c->gop_size      = 30;//12; /* emit one intra frame every twelve frames at most */
             c->pix_fmt       = STREAM_PIX_FMT;
 
 //            c->max_b_frames = 3;
