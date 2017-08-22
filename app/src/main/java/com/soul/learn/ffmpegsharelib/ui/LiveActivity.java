@@ -75,9 +75,8 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
                 if (recording) {
                     recording = false;
                     StreamHelper.finishStream();
-//                    FfmpegHelper.flush();
-//                    FfmpegHelper.close();
                 } else {
+                    StreamHelper.initStartTime();
                     recording = true;
                     //开始录制
                     RecordTask task = new RecordTask();
@@ -161,7 +160,8 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
             @Override
             public void onPreviewFrame(byte[] yuvdata, Camera arg1) {
                 if(recording){
-                    StreamHelper.sendVideo(yuvdata);
+//                    StreamHelper.sendVideo(yuvdata);
+                    StreamHelper.senddata(yuvdata, yuvdata.length,false);
                 }
             }
 
@@ -205,9 +205,10 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
 
             while(recording){
                 int size = record.read(bb, 0,bufferSize);
-                Log.i("NIODATA", "AUDIO BUFFER GET SIZE = " + size);
+//                Log.i("NIODATA", "AUDIO BUFFER GET SIZE = " + size);
                 if(size >0){
-                    StreamHelper.sendAudio(bb, size);
+//                    StreamHelper.sendAudio(bb, size);
+                    StreamHelper.senddata(bb, size,true);
                 }
             }
             if(record.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING){

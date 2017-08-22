@@ -2,6 +2,7 @@
 // Created by chenjianhua on 2017/8/18.
 //
 
+#include <libavutil/time.h>
 #include "liveStreamImlp.h"
 
 #define LOGE(format, ...)  __android_log_print(ANDROID_LOG_ERROR, "NIODATA", format, ##__VA_ARGS__)
@@ -35,6 +36,7 @@ typedef struct OutputStream {
     struct SwrContext *swr_ctx;
 } OutputStream;
 
+AVBitStreamFilterContext* faacbsfc = NULL;
 OutputStream video_st = { 0 }, audio_st = { 0 };
 const char *filename;
 AVOutputFormat *fmt;
@@ -44,6 +46,9 @@ int ret;
 int have_video = 0, have_audio = 0;
 int encode_video = 0, encode_audio = 0;
 AVDictionary *opt = NULL;
+int64_t start_time;
+int64_t frame_index=0;
+int64_t framecnt_a = 0;
 int y_length;
 int uv_length;
 
@@ -288,15 +293,15 @@ static AVFrame *get_audio_frame(OutputStream *ost,jbyte* au,int size)
                       STREAM_DURATION, (AVRational){ 1, 1 }) >= 0)
         return NULL;*/
 
-    LOGI("=========XXXX000!");
+//    LOGI("=========XXXX000!");
     uint8_t *frame_buf = (uint8_t *)av_malloc(size);
 
-    LOGI("=========XXXX111!");
+//    LOGI("=========XXXX111!");
     if(memcpy(frame_buf,au,size)<=0){
         LOGI("Failed to read raw data!");
         return NULL;
     }
-    LOGI("=========XXXX222!");
+//    LOGI("=========XXXX222!");
 //    frame->data[0] = frame_buf;
 
     for (j = 0; j <frame->nb_samples; j++) {
@@ -313,11 +318,88 @@ static AVFrame *get_audio_frame(OutputStream *ost,jbyte* au,int size)
     return frame;
 }
 
+static
 /*
  * encode one audio frame and send it to the muxer
  * return 1 when encoding is finished, 0 otherwise
  */
-static int write_audio_frame(AVFormatContext *oc, OutputStream *ost,jbyte* au,int size)
+static int write_audio_frame(AVFormatContext *oc, OutputStream *ost,jbyte* au,int datasize)
+{
+    AVCodecContext *c;
+    AVPacket pkt = { 0 }; // data and size must be 0;
+    AVFrame *frame;
+    int ret;
+    int got_packet;
+    int dst_nb_samples;
+
+    av_init_packet(&pkt);
+    c = ost->enc;
+
+    frame = ost->tmp_frame;
+    LOGI("=====send audio");
+    int size = av_samples_get_buffer_size(NULL,c->channels,
+                                          c->frame_size,c->sample_fmt,1);
+
+    uint8_t *frame_buf = (uint8_t *)av_malloc(size*4);
+    avcodec_fill_audio_frame(frame,c->channels,c->sample_fmt,(const uint8_t *)frame_buf,size,1);
+    if(memcpy(frame_buf,au,datasize)<=0){
+        LOGE("Failed to read raw data!");
+        return -1;
+    }
+    frame->data[0] = frame_buf;
+//    frame = get_audio_frame(ost, au,size);
+
+    ret = avcodec_encode_audio2(c, &pkt, frame, &got_packet);
+    if (ret < 0) {
+        LOGI("Error encoding audio frame: %s\n", av_err2str(ret));
+        exit(1);
+    }
+
+    if (got_packet) {
+        LOGI("==========get audio packet");
+
+        pkt.stream_index = ost->st->index;
+
+        av_bitstream_filter_filter(faacbsfc, c, NULL, &pkt.data, &pkt.size, pkt.data, pkt.size, 0);
+
+        //Write PTS
+        AVRational time_base=oc->streams[ost->st->index]->time_base;
+
+        //��ʾһ��30֡
+        AVRational r_framerate1 = {c->sample_rate, 1 };
+        AVRational time_base_q = AV_TIME_BASE_Q;
+
+        //Duration between 2 frames (us)��֮֡���ʱ����������ĵ�λ��΢��
+        int64_t calc_duration = (double)(AV_TIME_BASE)*(1 / av_q2d(r_framerate1));	//�ڲ�ʱ���
+
+
+        //Parameters
+        int64_t timett = av_gettime();
+        int64_t now_time = timett - start_time;
+        pkt.pts = av_rescale_q(now_time, time_base_q, time_base);;
+        pkt.dts=pkt.pts;
+        pkt.duration = av_rescale_q(calc_duration, time_base_q, time_base);
+
+        pkt.pos = -1;
+
+//        framecnt_a++;
+//        pkt.duration = pkt.duration * framecnt_a;
+
+        /* Write the compressed frame to the media file. */
+        log_packet(oc, &pkt);
+        ret = av_interleaved_write_frame(oc, &pkt);
+
+        if (ret < 0) {
+            LOGI("Error while writing audio frame: %s\n",
+                 av_err2str(ret));
+            exit(1);
+        }
+    }
+
+    return (frame || got_packet) ? 0 : 1;
+}
+
+static int write_audio_frame2(AVFormatContext *oc, OutputStream *ost,jbyte* au,int size)
 {
     AVCodecContext *c;
     AVPacket pkt = { 0 }; // data and size must be 0;
@@ -330,13 +412,13 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost,jbyte* au,in
     c = ost->enc;
 
     LOGI("=====send audio");
-    LOGI("===== before get audio");
+//    LOGI("===== before get audio");
     frame = get_audio_frame(ost, au,size);
 
-    LOGI("===== after get audio");
+//    LOGI("===== after get audio");
     if (frame) {
 
-        LOGI("===== frame not null");
+//        LOGI("===== frame not null");
 
         /* convert samples from native format to destination codec format, using the resampler */
         /* compute destination number of samples */
@@ -376,7 +458,36 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost,jbyte* au,in
 
     if (got_packet) {
         LOGI("==========get audio packet");
-        ret = write_frame(oc, &c->time_base, ost->st, &pkt);
+
+        pkt.stream_index = ost->st->index;
+
+        AVRational time_base=oc->streams[ost->st->index]->time_base;
+
+        //��ʾһ��30֡
+        AVRational r_framerate1 = {c->sample_rate, 1 };
+        AVRational time_base_q = AV_TIME_BASE_Q;
+
+        //Duration between 2 frames (us)��֮֡���ʱ����������ĵ�λ��΢��
+        int64_t calc_duration = (double)(AV_TIME_BASE)*(1 / av_q2d(r_framerate1));	//�ڲ�ʱ���
+
+/*		enc_pkt_a.pts = av_rescale_q(nb_samples*calc_duration, time_base_q, time_base);
+		enc_pkt_a.dts=enc_pkt_a.pts;
+		enc_pkt_a.duration = av_rescale_q(calc_duration, time_base_q, time_base);*/
+
+        //Parameters
+        int64_t timett = av_gettime();
+        int64_t now_time = timett - start_time;
+        pkt.pts = av_rescale_q(now_time, time_base_q, time_base);;
+        pkt.dts=pkt.pts;
+        pkt.duration = av_rescale_q(calc_duration, time_base_q, time_base);
+
+        pkt.pos = -1;
+
+        /* Write the compressed frame to the media file. */
+        log_packet(oc, &pkt);
+        ret = av_interleaved_write_frame(oc, &pkt);
+
+//        ret = write_frame(oc, &c->time_base, ost->st, &pkt);
         if (ret < 0) {
 //            fprintf(stderr, "Error while writing audio frame: %s\n",
 //                    av_err2str(ret));
@@ -522,7 +633,7 @@ static AVFrame *get_video_frame(OutputStream *ost,jbyte* yuv)
         fill_yuv_image(ost->frame, ost->next_pts, c->width, c->height,yuv);
     }
 
-    ost->frame->pts = ost->next_pts++;
+//    ost->frame->pts = ost->next_pts++;
 
     return ost->frame;
 }
@@ -556,7 +667,57 @@ static int write_video_frame(AVFormatContext *oc, OutputStream *ost,jbyte* yuv)
     }
 
     if (got_packet) {
-        ret = write_frame(oc, &c->time_base, ost->st, &pkt);
+        //Write PTS
+        pkt.stream_index = ost->st->index;
+        AVRational time_base=oc->streams[0]->time_base;
+
+        AVRational r_framerate1 = {30, 1 };
+        AVRational time_base_q = AV_TIME_BASE_Q;
+
+        int64_t calc_duration = (double)(AV_TIME_BASE)*(1 / av_q2d(r_framerate1));
+
+
+        //Parameters
+        int64_t timett = av_gettime();
+        int64_t now_time = timett - start_time;
+        pkt.pts = av_rescale_q(now_time, time_base_q, time_base);;
+        pkt.dts=pkt.pts;
+        pkt.duration = av_rescale_q(calc_duration, time_base_q, time_base);
+
+        pkt.pos = -1;
+
+        /*if(pkt.pts==AV_NOPTS_VALUE){
+            //Write PTS
+            AVRational time_base1=oc->streams[video_st.st->id]->time_base;
+            //Duration between 2 frames (us)
+            int64_t calc_duration=(double)AV_TIME_BASE/av_q2d(oc->streams[video_st.st->id]->r_frame_rate);
+            //Parameters
+            pkt.pts=(double)(frame_index*calc_duration)/(double)(av_q2d(time_base1)*AV_TIME_BASE);
+            pkt.dts=pkt.pts;
+            pkt.duration=(double)calc_duration/(double)(av_q2d(time_base1)*AV_TIME_BASE);
+        }
+        AVRational time_base= oc->streams[video_st.st->id]->time_base; //ost->streams[videoindex]->time_base;
+        AVRational time_base_q={1,AV_TIME_BASE};
+        int64_t pts_time = av_rescale_q(pkt.dts, time_base, time_base_q);
+        int64_t now_time = av_gettime() - start_time;
+        if (pts_time > now_time)
+            av_usleep(pts_time - now_time);*/
+
+//        pkt.pts = av_rescale_q_rnd(pkt.pts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+//        pkt.dts = av_rescale_q_rnd(pkt.dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+//        pkt.duration = av_rescale_q(pkt.duration, in_stream->time_base, out_stream->time_base);
+//        pkt.pos = -1;
+
+//        av_packet_rescale_ts(&pkt, c->time_base, ost->st->time_base);
+
+
+        frame_index++;
+
+        log_packet(oc, &pkt);
+
+        ret = av_interleaved_write_frame(oc, &pkt);
+
+//        ret = write_frame(oc, &c->time_base, ost->st, &pkt);
     } else {
         ret = 0;
     }
@@ -591,6 +752,8 @@ int init(char *outputfilename)
 
     //Network
     avformat_network_init();
+
+    faacbsfc =  av_bitstream_filter_init("aac_adtstoasc");
 
 //    filename = "xyxz.flv";
     filename = outputfilename;
@@ -656,8 +819,12 @@ int init(char *outputfilename)
              av_err2str(ret));
         return 1;
     }
-}
 
+//    start_time = av_gettime();
+}
+int initStartTime(){
+    start_time = av_gettime();
+}
 int sendVideo(jbyte* yuv){
     write_video_frame(oc, &video_st, yuv);
 }

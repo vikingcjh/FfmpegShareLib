@@ -24,6 +24,8 @@
 
 int init(char *outputfilename);
 
+int initStartTime();
+
 int sendVideo(jbyte *yuv);
 
 int sendAudio(jbyte *au, int size);

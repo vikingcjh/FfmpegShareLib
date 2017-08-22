@@ -88,6 +88,16 @@ Java_com_soul_learn_ffmpegsharelib_jniUtils_StreamHelper_init(JNIEnv *env, jclas
 
 extern "C"
 JNIEXPORT jint JNICALL
+Java_com_soul_learn_ffmpegsharelib_jniUtils_StreamHelper_initStartTime(JNIEnv *env, jclass type) {
+
+    // TODO
+    initStartTime();
+
+    return 0;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
 Java_com_soul_learn_ffmpegsharelib_jniUtils_StreamHelper_sendVideo(JNIEnv *env, jclass type,
                                                                         jbyteArray yuvdata_) {
     jbyte *yuvdata = env->GetByteArrayElements(yuvdata_, NULL);
