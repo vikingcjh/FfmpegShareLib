@@ -21,9 +21,9 @@ import com.soul.learn.ffmpegsharelib.ui.LiveActivity;
 public class MainActivity extends Activity {
 
     // Used to load the 'native-lib' library on application startup.
-    static {
+    /*static {
         System.loadLibrary("native-lib");
-    }
+    }*/
 
     private String ip;
     private boolean isRunning = false;
@@ -46,9 +46,9 @@ public class MainActivity extends Activity {
         startButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View arg0){
 
-                Intent intent = new Intent(MainActivity.this, LiveActivity.class);
-                startActivity(intent);
-                /*new Thread(new Runnable() {
+                /*Intent intent = new Intent(MainActivity.this, LiveActivity.class);
+                startActivity(intent);*/
+                new Thread(new Runnable() {
                     @Override
                     public void run() {
                         if (isRunning) {
@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
                         FfmpegStreamUtils.muxing(outputurl);
                         isRunning = false;
                     }
-                }).start();*/
+                }).start();
 
                 /*String folderurl= Environment.getExternalStorageDirectory().getPath();
 

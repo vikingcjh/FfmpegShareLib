@@ -1,5 +1,6 @@
 package com.soul.learn.ffmpegsharelib.ui;
 
+import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -21,6 +22,7 @@ import com.soul.learn.ffmpegsharelib.R;
 import com.soul.learn.ffmpegsharelib.jniUtils.StreamHelper;
 
 import java.io.IOException;
+import java.util.List;
 
 public class LiveActivity extends Activity implements SurfaceHolder.Callback {
 
@@ -39,9 +41,12 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
     private int channelConfig = AudioFormat.CHANNEL_IN_STEREO;//CHANNEL_IN_STEREO//CHANNEL_IN_MONO
     private int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
 
-//    static {
-//        System.loadLibrary("native-lib");
-//    }
+    private static int CAMERA_WIDTH = 352;//1920;
+    private static int CAMERA_HEIGHT = 288; //1080;
+
+    /*static {
+        System.loadLibrary("native-lib");
+    }*/
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,8 +57,8 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
                 +"sqq.flv";
         Log.d(TAG,"name"+filename);*/
 
-//        String outputurl = "rtmp://" + "10.87.100.107"+":1935" + "/live/livestream";
-        String outputurl = "rtmp://" + "192.168.1.104"+":1935" + "/live/livestream";
+        String outputurl = "rtmp://" + "10.87.100.107"+":1935" + "/live/livestream";
+//        String outputurl = "rtmp://" + "192.168.1.104"+":1935" + "/live/livestream";
         Log.i("niodata", outputurl);
         StreamHelper.init(outputurl);
         /*if(FfmpegHelper.init(filename.getBytes())==-1){
@@ -100,11 +105,38 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
         // TODO Auto-generated method stub
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
             camera = Camera.open(0);
+            camera.setDisplayOrientation(90);
         } else {
             camera = Camera.open();
+            camera.setDisplayOrientation(90);
         }
         try {
             if (camera != null) {
+                Camera.Parameters p = camera.getParameters();
+//                p.setPreviewSize(352, 288);
+                p.setPreviewSize(CAMERA_WIDTH,CAMERA_HEIGHT);
+//                p.setFlashMode(Camera.Parameters.FOCUS_MODE_AUTO);
+                p.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+//                p.setPreviewFormat(ImageFormat.YV12);
+//                p.setPreviewFormat(ImageFormat.NV21);
+                p.setPreviewFpsRange(30000, 30000);
+                p.setRotation(180);
+                List<int[]> list= p.getSupportedPreviewFpsRange();
+                for (int i=0; i<list.size();i++) {
+                    int[] a = list.get(i);
+                    Log.i("NIODATA", "Fps List[" + i + "]= ");
+                    for(int k=0;k<a.length;k++) {
+                        Log.i("NIODATA", "a[" + k + "]= " + a[k]);
+                    }
+
+                }
+                List<Camera.Size> list2 = p.getSupportedPreviewSizes();
+                for (int i=0; i<list2.size();i++) {
+                    Camera.Size a = list2.get(i);
+                    Log.i("NIODATA", "Size List[" + i + "]= "+a.width+","+a.height);
+                }
+                camera.setParameters(p);
+
                 camera.setPreviewDisplay(holder);
                 surfaceHolder = holder;
             }
@@ -122,25 +154,14 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
                                int height) {
         // TODO Auto-generated method stub
         Camera.Parameters p = camera.getParameters();
-        p.setPreviewSize(352, 288);
-        //每秒 显示20~30帧
-        //p.setPreviewFpsRange(30, 30);
-        //p.setPictureFormat(PixelFormat.JPEG); // Sets the image format for
-        // picture 设定相片格式为JPEG，默认为NV21
-        //p.setPreviewFormat(ImageFormat.YV12); // Sets the image format
-        // for preview
-        // picture，默认为NV21
-        // p.setRotation(90);
+        p.setPreviewSize(CAMERA_WIDTH,CAMERA_HEIGHT);
+
         camera.setPreviewCallback(new Camera.PreviewCallback() {
 
             @Override
             public void onPreviewFrame(byte[] yuvdata, Camera arg1) {
-                //stop.setText(yuvdata.toString());
-                Log.d(TAG, "onPreviewFrame");
                 if(recording){
                     StreamHelper.sendVideo(yuvdata);
-//                    FfmpegHelper.start(yuvdata);
-                    //FfmpegHelper.flush();
                 }
             }
 
@@ -183,11 +204,11 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
             byte[] bb = new byte[bufferSize];
 
             while(recording){
-                    int size = record.read(bb, 0,bufferSize);
-                    if(size >0){
-
-//                        StreamHelper.sendAudio(bb, size);
-                    }
+                int size = record.read(bb, 0,bufferSize);
+                Log.i("NIODATA", "AUDIO BUFFER GET SIZE = " + size);
+                if(size >0){
+                    StreamHelper.sendAudio(bb, size);
+                }
             }
             if(record.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING){
                 record.stop();

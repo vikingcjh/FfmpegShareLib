@@ -9,7 +9,7 @@
 extern "C" {
 //#include "libavcodec/avcodec.h"
 #include "liveStreamImlp.h"
-//#include "ffmpegUtil/muxing.h"
+#include "muxing.h"
 
 }
 
@@ -55,7 +55,7 @@ Java_com_soul_learn_ffmpegsharelib_jniUtils_FfmpegStreamUtils_muxing(JNIEnv *env
     sprintf(output_str,"%s",env->GetStringUTFChars(outputPath_, NULL));
 
     LOGI("%s",output_str);
-//    mux(output_str);
+    mux(output_str);
 
     LOGI("after muxing");
 

@@ -33,6 +33,7 @@
     <uses-feature android:name="android.hardware.camera" />
 
     <application
+        android:name=".ShareApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -48,7 +49,8 @@
         </activity>
         <activity
             android:name=".ui.LiveActivity"
-            android:label="@string/title_activity_live">
+            android:label="@string/title_activity_live"
+            android:screenOrientation="portrait">
             <!--<intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

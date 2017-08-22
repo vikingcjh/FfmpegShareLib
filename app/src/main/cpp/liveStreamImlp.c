@@ -4,16 +4,16 @@
 
 #include "liveStreamImlp.h"
 
-#define LOGE(format, ...)  __android_log_print(ANDROID_LOG_ERROR, "(>_<)", format, ##__VA_ARGS__)
-#define LOGI(format, ...)  __android_log_print(ANDROID_LOG_INFO,  "(^_^)", format, ##__VA_ARGS__)
+#define LOGE(format, ...)  __android_log_print(ANDROID_LOG_ERROR, "NIODATA", format, ##__VA_ARGS__)
+#define LOGI(format, ...)  __android_log_print(ANDROID_LOG_INFO,  "NIODATA", format, ##__VA_ARGS__)
 #define LOGI2(format, ...)  __android_log_print(ANDROID_LOG_INFO,  "NIODATA", format, ##__VA_ARGS__)
 
-#define STREAM_DURATION   1000.0
+//#define STREAM_DURATION   1000.0
 #define STREAM_FRAME_RATE 30 /* 25 images/s */
 #define STREAM_PIX_FMT    AV_PIX_FMT_YUV420P /* default pix_fmt */
 
-#define VIEW_WIDTH 352
-#define VIEW_HEIGHT 288
+#define VIEW_WIDTH 352//1920     //352
+#define VIEW_HEIGHT 288//1080    //288
 
 #define SCALE_FLAGS SWS_BICUBIC
 
@@ -51,11 +51,11 @@ static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
 {
     AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
 
-    /*LOGI2("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
+    LOGI2("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
            av_ts2str(pkt->pts), av_ts2timestr(pkt->pts, time_base),
            av_ts2str(pkt->dts), av_ts2timestr(pkt->dts, time_base),
            av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, time_base),
-           pkt->stream_index);*/
+           pkt->stream_index);
 }
 
 static int write_frame(AVFormatContext *fmt_ctx, const AVRational *time_base, AVStream *st, AVPacket *pkt)
@@ -147,10 +147,10 @@ static void add_stream(OutputStream *ost, AVFormatContext *oc,
             ost->st->time_base = (AVRational){ 1, STREAM_FRAME_RATE };
             c->time_base       = ost->st->time_base;
 
-            c->gop_size      = 30;//12; /* emit one intra frame every twelve frames at most */
+            c->gop_size      =30;//12; /* emit one intra frame every twelve frames at most */
             c->pix_fmt       = STREAM_PIX_FMT;
 
-//            c->max_b_frames = 3;
+
             if (c->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
                 /* just for testing, we also add B-frames */
                 c->max_b_frames = 2;
@@ -161,6 +161,7 @@ static void add_stream(OutputStream *ost, AVFormatContext *oc,
                  * the motion of the chroma plane does not match the luma plane. */
                 c->mb_decision = 2;
             }
+//            c->max_b_frames = 0;
 //            c->qmin = 10;
 //            c->qmax = 51;
             break;
@@ -283,25 +284,28 @@ static AVFrame *get_audio_frame(OutputStream *ost,jbyte* au,int size)
     int16_t *q = (int16_t*)frame->data[0];
 
     /* check if we want to generate more frames */
-    if (av_compare_ts(ost->next_pts, ost->enc->time_base,
+    /*if (av_compare_ts(ost->next_pts, ost->enc->time_base,
                       STREAM_DURATION, (AVRational){ 1, 1 }) >= 0)
-        return NULL;
+        return NULL;*/
 
+    LOGI("=========XXXX000!");
     uint8_t *frame_buf = (uint8_t *)av_malloc(size);
 
+    LOGI("=========XXXX111!");
     if(memcpy(frame_buf,au,size)<=0){
-        LOGE("Failed to read raw data!");
+        LOGI("Failed to read raw data!");
         return NULL;
     }
-    frame->data[0] = frame_buf;
+    LOGI("=========XXXX222!");
+//    frame->data[0] = frame_buf;
 
-    /*for (j = 0; j <frame->nb_samples; j++) {
+    for (j = 0; j <frame->nb_samples; j++) {
         v = (int)(sin(ost->t) * 10000);
         for (i = 0; i < ost->enc->channels; i++)
             *q++ = au++;
         ost->t     += ost->tincr;
         ost->tincr += ost->tincr2;
-    }*/
+    }
 
     frame->pts = ost->next_pts;
     ost->next_pts  += frame->nb_samples;
@@ -325,13 +329,14 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost,jbyte* au,in
     av_init_packet(&pkt);
     c = ost->enc;
 
-//    LOGI("===== before get audio");
+    LOGI("=====send audio");
+    LOGI("===== before get audio");
     frame = get_audio_frame(ost, au,size);
 
-//    LOGI("===== after get audio");
+    LOGI("===== after get audio");
     if (frame) {
 
-//        LOGI("===== frame not null");
+        LOGI("===== frame not null");
 
         /* convert samples from native format to destination codec format, using the resampler */
         /* compute destination number of samples */
@@ -370,7 +375,7 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost,jbyte* au,in
     }
 
     if (got_packet) {
-//        LOGI("==========get audio packet");
+        LOGI("==========get audio packet");
         ret = write_frame(oc, &c->time_base, ost->st, &pkt);
         if (ret < 0) {
 //            fprintf(stderr, "Error while writing audio frame: %s\n",
@@ -418,6 +423,9 @@ static void open_video(AVFormatContext *oc, AVCodec *codec, OutputStream *ost, A
     AVDictionary *opt = NULL;
 
     av_dict_copy(&opt, opt_arg, 0);
+
+    av_dict_set(&opt, "preset", "ultrafast", 0);
+    av_dict_set(&opt, "tune", "zerolatency", 0);
 
     /* open the codec */
     ret = avcodec_open2(c, codec, &opt);
@@ -470,8 +478,8 @@ static void fill_yuv_image(AVFrame *pict, int frame_index,
     memcpy(pict->data[0],yuv,y_length);
     for(i=0;i<uv_length;i++)
     {
-        *(pict->data[2]+i)=*(yuv+y_length+i*2);
-        *(pict->data[1]+i)=*(yuv+y_length+i*2+1);
+        *(pict->data[1]+i)=*(yuv+y_length+i*2);
+        *(pict->data[2]+i)=*(yuv+y_length+i*2+1);
     }
 
 }
@@ -481,9 +489,9 @@ static AVFrame *get_video_frame(OutputStream *ost,jbyte* yuv)
     AVCodecContext *c = ost->enc;
 
     /* check if we want to generate more frames */
-    if (av_compare_ts(ost->next_pts, c->time_base,
+    /*if (av_compare_ts(ost->next_pts, c->time_base,
                       STREAM_DURATION, (AVRational){ 1, 1 }) >= 0)
-        return NULL;
+        return NULL;*/
 
     /* when we pass a frame to the encoder, it may keep a reference to it
      * internally; make sure we do not overwrite it here */
@@ -530,6 +538,8 @@ static int write_video_frame(AVFormatContext *oc, OutputStream *ost,jbyte* yuv)
     AVFrame *frame;
     int got_packet = 0;
     AVPacket pkt = { 0 };
+
+    LOGI("=====send vedio");
 
     c = ost->enc;
 
@@ -590,6 +600,7 @@ int init(char *outputfilename)
     /* allocate the output media context */
 //    avformat_alloc_output_context2(&oc, NULL, NULL, filename);
     avformat_alloc_output_context2(&oc, NULL, "flv",outputfilename);
+//    avformat_alloc_output_context2(&oc, NULL, "h264",outputfilename);
     if (!oc) {
         LOGI2("Could not deduce output format from file extension: using MPEG.\n");
 //        avformat_alloc_output_context2(&oc, NULL, "mpeg", outputfilename);
