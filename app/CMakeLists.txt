@@ -5,11 +5,15 @@
 
 cmake_minimum_required(VERSION 3.4.1)
 
-set(lib_ffmpeg_DIR ${CMAKE_SOURCE_DIR}/src/main/jniLibs/armeabi)
+
+set(lib_ffmpeg_DIR ${CMAKE_SOURCE_DIR}/src/main/jniLibs/armeabi-v7a)
 include_directories(
      ${CMAKE_SOURCE_DIR}/src/main/cpp/ffmpegUtil
      ${CMAKE_SOURCE_DIR}/src/main/cpp/include
      ${CMAKE_SOURCE_DIR}/src/main/cpp
+
+
+
 )
 
 # 查找所有源码 并拼接到路径列表
@@ -23,21 +27,28 @@ list(APPEND SRC_LIST ${CORE_SRC_LIST})
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
 
-add_library(avcodec-57_lib SHARED IMPORTED)
-set_target_properties(avcodec-57_lib PROPERTIES IMPORTED_LOCATION
-                          ${lib_ffmpeg_DIR}/libavcodec-57.so)
-add_library(avformat-57_lib SHARED IMPORTED)
-set_target_properties(avformat-57_lib PROPERTIES IMPORTED_LOCATION
-                     ${lib_ffmpeg_DIR}/libavformat-57.so)
-add_library(avutil-55_lib SHARED IMPORTED)
-set_target_properties(avutil-55_lib PROPERTIES IMPORTED_LOCATION
-                     ${lib_ffmpeg_DIR}/libavutil-55.so)
-add_library(swresample-2_lib SHARED IMPORTED)
-set_target_properties(swresample-2_lib PROPERTIES IMPORTED_LOCATION
-                     ${lib_ffmpeg_DIR}/libswresample-2.so)
-add_library(swscale-4_lib SHARED IMPORTED)
-set_target_properties(swscale-4_lib PROPERTIES IMPORTED_LOCATION
-                     ${lib_ffmpeg_DIR}/libswscale-4.so)
+add_library(avcodec_lib SHARED IMPORTED)
+set_target_properties(avcodec_lib PROPERTIES IMPORTED_LOCATION
+                          ${lib_ffmpeg_DIR}/libavcodec.so)
+add_library(avfilter_lib SHARED IMPORTED)
+set_target_properties(avfilter_lib PROPERTIES IMPORTED_LOCATION
+                          ${lib_ffmpeg_DIR}/libavfilter.so)
+add_library(avformat_lib SHARED IMPORTED)
+set_target_properties(avformat_lib PROPERTIES IMPORTED_LOCATION
+                     ${lib_ffmpeg_DIR}/libavformat.so)
+add_library(avutil_lib SHARED IMPORTED)
+set_target_properties(avutil_lib PROPERTIES IMPORTED_LOCATION
+                     ${lib_ffmpeg_DIR}/libavutil.so)
+add_library(avresample_lib SHARED IMPORTED)
+set_target_properties(avresample_lib PROPERTIES IMPORTED_LOCATION
+                     ${lib_ffmpeg_DIR}/libavresample.so)
+add_library(swresample_lib SHARED IMPORTED)
+set_target_properties(swresample_lib PROPERTIES IMPORTED_LOCATION
+                     ${lib_ffmpeg_DIR}/libswresample.so)
+add_library(swscale_lib SHARED IMPORTED)
+set_target_properties(swscale_lib PROPERTIES IMPORTED_LOCATION
+                     ${lib_ffmpeg_DIR}/libswscale.so)
+
 
 
 add_library( # Sets the name of the library.
@@ -73,8 +84,10 @@ target_link_libraries( # Specifies the target library.
                        # Links the target library to the log library
                        # included in the NDK.
                        ${log-lib}
-                       avcodec-57_lib
-                       avformat-57_lib
-                       avutil-55_lib
-                       swresample-2_lib
-                       swscale-4_lib)
+                       avcodec_lib
+                       avfilter_lib
+                       avformat_lib
+                       avutil_lib
+                       avresample_lib
+                       swresample_lib
+                       swscale_lib)
