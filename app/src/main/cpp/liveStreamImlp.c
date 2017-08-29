@@ -36,7 +36,7 @@ typedef struct OutputStream {
     struct SwrContext *swr_ctx;
 } OutputStream;
 
-AVBitStreamFilterContext* faacbsfc = NULL;
+//AVBitStreamFilterContext* faacbsfc = NULL;
 OutputStream video_st = { 0 }, audio_st = { 0 };
 const char *filename;
 AVOutputFormat *fmt;
@@ -242,7 +242,7 @@ static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost, A
 
     ost->frame     = alloc_audio_frame(c->sample_fmt, c->channel_layout,
                                        c->sample_rate, nb_samples);
-    ost->tmp_frame = alloc_audio_frame(AV_SAMPLE_FMT_S16, c->channel_layout,
+    ost->tmp_frame = alloc_audio_frame(AV_SAMPLE_FMT_U8/*AV_SAMPLE_FMT_S16*/, c->channel_layout,
                                        c->sample_rate, nb_samples);
 
     /* copy the stream parameters to the muxer */
@@ -262,7 +262,7 @@ static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost, A
     /* set options */
     av_opt_set_int       (ost->swr_ctx, "in_channel_count",   c->channels,       0);
     av_opt_set_int       (ost->swr_ctx, "in_sample_rate",     c->sample_rate,    0);
-    av_opt_set_sample_fmt(ost->swr_ctx, "in_sample_fmt",      AV_SAMPLE_FMT_S16, 0);
+    av_opt_set_sample_fmt(ost->swr_ctx, "in_sample_fmt",      AV_SAMPLE_FMT_U8/*AV_SAMPLE_FMT_S16*/, 0);
     av_opt_set_int       (ost->swr_ctx, "out_channel_count",  c->channels,       0);
     av_opt_set_int       (ost->swr_ctx, "out_sample_rate",    c->sample_rate,    0);
     av_opt_set_sample_fmt(ost->swr_ctx, "out_sample_fmt",     c->sample_fmt,     0);
@@ -296,18 +296,18 @@ static AVFrame *get_audio_frame(OutputStream *ost,jbyte* au,int size)
         return NULL;
     }
 //    LOGI("=========XXXX222!");
-//    frame->data[0] = frame_buf;
+    frame->data[0] = frame_buf;
 
-    for (j = 0; j <frame->nb_samples; j++) {
+    /*for (j = 0; j <frame->nb_samples; j++) {
         v = (int)(sin(ost->t) * 10000);
         for (i = 0; i < ost->enc->channels; i++)
             *q++ = au++;
         ost->t     += ost->tincr;
         ost->tincr += ost->tincr2;
-    }
+    }*/
 
-    frame->pts = ost->next_pts;
-    ost->next_pts  += frame->nb_samples;
+//    frame->pts = ost->next_pts;
+//    ost->next_pts  += frame->nb_samples;
 
     return frame;
 }
@@ -677,7 +677,7 @@ int init(char *outputfilename)
     //Network
     avformat_network_init();
 
-    faacbsfc =  av_bitstream_filter_init("aac_adtstoasc");
+//    faacbsfc =  av_bitstream_filter_init("aac_adtstoasc");
 
     filename = outputfilename;
 
@@ -722,7 +722,7 @@ int init(char *outputfilename)
         add_stream(&audio_st, oc, &audio_codec, fmt->audio_codec);
         have_audio = 1;
         encode_audio = 1;
-        av_format_set_audio_codec(&oc, audio_codec);
+//        av_format_set_audio_codec(&oc, audio_codec);
     }
     if (fmt->video_codec != AV_CODEC_ID_NONE) {
         add_stream(&video_st, oc, &video_codec, fmt->video_codec);

@@ -39,7 +39,8 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
     private int frequence = 44100;
     //CHANNEL_IN_MONO	单声道
     private int channelConfig = AudioFormat.CHANNEL_IN_STEREO;//CHANNEL_IN_STEREO//CHANNEL_IN_MONO
-    private int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
+//    private int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
+    private int audioEncoding = AudioFormat.ENCODING_PCM_8BIT;
 
     private static int CAMERA_WIDTH = 352;//1920;
     private static int CAMERA_HEIGHT = 288; //1080;
@@ -118,7 +119,7 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
                 p.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
 //                p.setPreviewFormat(ImageFormat.YV12);
 //                p.setPreviewFormat(ImageFormat.NV21);
-                p.setPreviewFpsRange(30000, 30000);
+                p.setPreviewFpsRange(25000, 25000);
                 p.setRotation(180);
                 List<int[]> list= p.getSupportedPreviewFpsRange();
                 for (int i=0; i<list.size();i++) {
