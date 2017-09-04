@@ -11,6 +11,7 @@
 #include <math.h>
 #include <android/log.h>
 #include <jni.h>
+#include <pthread.h>
 
 #include "libavutil/avassert.h"
 #include "libavutil/channel_layout.h"
@@ -29,6 +30,8 @@ int initStartTime();
 int sendVideo(jbyte *yuv);
 
 int sendAudio(jbyte *au, int size);
+
+int sendAudioShort(jshort* au,int shortsize);
 
 int destroy();
 

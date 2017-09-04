@@ -119,7 +119,7 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
                 p.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
 //                p.setPreviewFormat(ImageFormat.YV12);
 //                p.setPreviewFormat(ImageFormat.NV21);
-                p.setPreviewFpsRange(25000, 25000);
+                p.setPreviewFpsRange(30000, 30000);
                 p.setRotation(180);
                 List<int[]> list= p.getSupportedPreviewFpsRange();
                 for (int i=0; i<list.size();i++) {
@@ -149,6 +149,9 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
         }
     }
 
+    long lasttimestamp = 0;
+    long curtimestamp = 0;
+    byte[] gyuvdata;
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width,
                                int height) {
@@ -161,8 +164,22 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
             @Override
             public void onPreviewFrame(byte[] yuvdata, Camera arg1) {
                 if(recording){
+//                    long lasttimestamp = 0;
+//                    long curtimestamp = 0;
+                    curtimestamp = System.currentTimeMillis();
+                    Log.i("niodata", "read vedio timestamp= " + curtimestamp);
+                    Log.i("niodata", "read vedio time_duration= " + (curtimestamp - lasttimestamp));
+//                    Log.i("niodata", "read vedio size= " + yuvdata.length);
+                    lasttimestamp = curtimestamp;
 //                    StreamHelper.sendVideo(yuvdata);
-                    StreamHelper.senddata(yuvdata, yuvdata.length,false);
+                    gyuvdata = yuvdata;
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            StreamHelper.senddata(gyuvdata, gyuvdata.length,false);
+                        }
+                    }).start();
+
                 }
             }
 
@@ -190,6 +207,7 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
 
     }
 
+    byte[] bb;
     class RecordTask extends AsyncTask<Void, Integer, Void> {
 
         @Override
@@ -202,14 +220,34 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
             //开始录制
             record.startRecording();
 
-            byte[] bb = new byte[bufferSize];
+            bb = new byte[bufferSize];
+//            short[] sData = new short[bufferSize / 2];
+
+            long lasttimestamp = 0;
+            long curtimestamp = 0;
 
             while(recording){
-                int size = record.read(bb, 0,bufferSize);
+                final int size = record.read(bb, 0,bufferSize);
+//                int size = record.read(sData, 0,bufferSize/2);
 //                Log.i("NIODATA", "AUDIO BUFFER GET SIZE = " + size);
                 if(size >0){
 //                    StreamHelper.sendAudio(bb, size);
-                    StreamHelper.senddata(bb, size,true);
+                    curtimestamp = System.currentTimeMillis();
+                    Log.i("niodata", "read audio timestamp= " + curtimestamp);
+                    Log.i("niodata", "read audio time_duration= " + (curtimestamp - lasttimestamp));
+                    Log.i("niodata", "read audio size= " + size);
+                    lasttimestamp = curtimestamp;
+//                    StreamHelper.senddata(bb, size,true);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            StreamHelper.sendAudio(bb, size);
+//                    byte bData[] = short2byte(sData);
+//                    StreamHelper.senddata(bData, bData.length,true);
+//                    StreamHelper.sendAudioShort(sData, size);
+                        }
+                    }).start();
+
                 }
             }
             if(record.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING){
@@ -224,6 +262,20 @@ public class LiveActivity extends Activity implements SurfaceHolder.Callback {
             super.onPostExecute(result);
             stop.setText("已经停止了");
         }
+
+    }
+
+
+    //convert short to byte
+    private byte[] short2byte(short[] sData) {
+        int shortArrsize = sData.length;
+        byte[] bytes = new byte[shortArrsize * 2];
+        for (int i = 0; i < shortArrsize; i++) {
+            bytes[i * 2] = (byte) (sData[i] & 0x00FF);
+            bytes[(i * 2) + 1] = (byte) (sData[i] >> 8);
+            sData[i] = 0;
+        }
+        return bytes;
 
     }
 

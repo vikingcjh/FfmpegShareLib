@@ -13,6 +13,8 @@ public class StreamHelper {
 
     public static native int sendAudio(byte[] audiodata,int size);
 
+    public static native int sendAudioShort(short[] audiodata,int shortSize);
+
     public static native int destroy();
 
     public static native int finishStream();

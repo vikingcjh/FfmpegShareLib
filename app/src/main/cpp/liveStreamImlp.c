@@ -10,7 +10,7 @@
 #define LOGI2(format, ...)  __android_log_print(ANDROID_LOG_INFO,  "NIODATA", format, ##__VA_ARGS__)
 
 #define STREAM_DURATION   10.0
-#define STREAM_FRAME_RATE 25 /* 25 images/s */
+#define STREAM_FRAME_RATE 30 /* 25 images/s */
 #define STREAM_PIX_FMT    AV_PIX_FMT_YUV420P /* default pix_fmt */
 
 #define VIEW_WIDTH 352//1920     //352
@@ -52,6 +52,8 @@ int64_t framecnt_a = 0;
 int y_length;
 int uv_length;
 
+pthread_mutex_t testlock;
+
 static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
 {
     AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
@@ -61,6 +63,14 @@ static void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
            av_ts2str(pkt->dts), av_ts2timestr(pkt->dts, time_base),
            av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, time_base),
            pkt->stream_index);
+}
+
+static int writeData(OutputStream *ops, AVPacket *pkt){
+    pthread_mutex_lock(&testlock);
+    log_packet(oc, pkt);
+    ret = av_interleaved_write_frame(oc, pkt);
+    pthread_mutex_unlock(&testlock);
+    return ret;
 }
 
 static int write_frame(AVFormatContext *fmt_ctx, const AVRational *time_base, AVStream *st, AVPacket *pkt)
@@ -229,11 +239,11 @@ static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost, A
         exit(1);
     }
 
-    /* init signal generator */
-    ost->t     = 0;
-    ost->tincr = 2 * M_PI * 110.0 / c->sample_rate;
-    /* increment frequency by 110 Hz per second */
-    ost->tincr2 = 2 * M_PI * 110.0 / c->sample_rate / c->sample_rate;
+//    /* init signal generator */
+//    ost->t     = 0;
+//    ost->tincr = 2 * M_PI * 110.0 / c->sample_rate;
+//    /* increment frequency by 110 Hz per second */
+//    ost->tincr2 = 2 * M_PI * 110.0 / c->sample_rate / c->sample_rate;
 
     if (c->codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)
         nb_samples = 10000;
@@ -242,7 +252,7 @@ static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost, A
 
     ost->frame     = alloc_audio_frame(c->sample_fmt, c->channel_layout,
                                        c->sample_rate, nb_samples);
-    ost->tmp_frame = alloc_audio_frame(AV_SAMPLE_FMT_U8/*AV_SAMPLE_FMT_S16*/, c->channel_layout,
+    ost->tmp_frame = alloc_audio_frame(/*AV_SAMPLE_FMT_U8*/AV_SAMPLE_FMT_S16, c->channel_layout,
                                        c->sample_rate, nb_samples);
 
     /* copy the stream parameters to the muxer */
@@ -290,6 +300,7 @@ static AVFrame *get_audio_frame(OutputStream *ost,jbyte* au,int size)
 //    LOGI("=========XXXX000!");
     uint8_t *frame_buf = (uint8_t *)av_malloc(size);
 
+
 //    LOGI("=========XXXX111!");
     if(memcpy(frame_buf,au,size)<=0){
         LOGI("Failed to read raw data!");
@@ -299,11 +310,40 @@ static AVFrame *get_audio_frame(OutputStream *ost,jbyte* au,int size)
     frame->data[0] = frame_buf;
 
     /*for (j = 0; j <frame->nb_samples; j++) {
-        v = (int)(sin(ost->t) * 10000);
+//        v = (int)(sin(ost->t) * 10000);
         for (i = 0; i < ost->enc->channels; i++)
             *q++ = au++;
-        ost->t     += ost->tincr;
-        ost->tincr += ost->tincr2;
+//        ost->t     += ost->tincr;
+//        ost->tincr += ost->tincr2;
+    }*/
+
+//    frame->pts = ost->next_pts;
+//    ost->next_pts  += frame->nb_samples;
+//    frame->pkt_duration = 80;
+
+    return frame;
+}
+
+static AVFrame *get_audio_frame_short(OutputStream *ost,jshort* au,int size)
+{
+    AVFrame *frame = ost->tmp_frame;
+//    int j, i, v;
+    int16_t *q = (int16_t*)frame->data[0];
+
+    int16_t *frame_buf = (int16_t *)av_malloc(size);
+
+    if(memcpy(frame_buf,au,size)<=0){
+        LOGI("Failed to read raw data!");
+        return NULL;
+    }
+    *q = frame_buf;
+
+    /*for (j = 0; j <frame->nb_samples; j++) {
+//        v = (int)(sin(ost->t) * 10000);
+        for (i = 0; i < ost->enc->channels; i++)
+            *q++ = au++;
+//        ost->t     += ost->tincr;
+//        ost->tincr += ost->tincr2;
     }*/
 
 //    frame->pts = ost->next_pts;
@@ -399,12 +439,117 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost,jbyte* au,in
         pkt.pts = av_rescale_q(now_time, time_base_q, time_base);;
         pkt.dts=pkt.pts;
         pkt.duration = av_rescale_q(calc_duration, time_base_q, time_base);
+//        pkt.duration = 80;
 
         pkt.pos = -1;
 
         /* Write the compressed frame to the media file. */
-        log_packet(oc, &pkt);
-        ret = av_interleaved_write_frame(oc, &pkt);
+//        log_packet(oc, &pkt);
+//        ret = av_interleaved_write_frame(oc, &pkt);
+        ret = writeData(oc, &pkt);
+
+//        ret = write_frame(oc, &c->time_base, ost->st, &pkt);
+        if (ret < 0) {
+//            fprintf(stderr, "Error while writing audio frame: %s\n",
+//                    av_err2str(ret));
+            LOGI("Error while writing audio frame: %s\n",
+                 av_err2str(ret));
+            exit(1);
+        }
+    }
+
+    return (frame || got_packet) ? 0 : 1;
+}
+
+static int write_audio_frame_short(AVFormatContext *oc, OutputStream *ost,jshort* au,int datasize)
+{
+    AVCodecContext *c;
+    AVPacket pkt = { 0 }; // data and size must be 0;
+    AVFrame *frame;
+    int ret;
+    int got_packet;
+    int dst_nb_samples;
+
+    av_init_packet(&pkt);
+    c = ost->enc;
+
+
+    LOGI("=====send audio");
+//    LOGI("===== before get audio");
+    frame = get_audio_frame_short(ost, au,datasize);
+
+//    LOGI("===== after get audio");
+    if (frame) {
+
+//        LOGI("===== frame not null");
+
+        /* convert samples from native format to destination codec format, using the resampler */
+        /* compute destination number of samples */
+        dst_nb_samples = av_rescale_rnd(swr_get_delay(ost->swr_ctx, c->sample_rate) + frame->nb_samples,
+                                        c->sample_rate, c->sample_rate, AV_ROUND_UP);
+        av_assert0(dst_nb_samples == frame->nb_samples);
+
+        /* when we pass a frame to the encoder, it may keep a reference to it
+         * internally;
+         * make sure we do not overwrite it here
+         */
+        ret = av_frame_make_writable(ost->frame);
+        if (ret < 0)
+            exit(1);
+
+        /* convert to destination format */
+        ret = swr_convert(ost->swr_ctx,
+                          ost->frame->data, dst_nb_samples,
+                          (const uint8_t **)frame->data, frame->nb_samples);
+        if (ret < 0) {
+//            fprintf(stderr, "Error while converting\n");
+            LOGI("Error while converting\n");
+            exit(1);
+        }
+        frame = ost->frame;
+
+        frame->pts = av_rescale_q(ost->samples_count, (AVRational){1, c->sample_rate}, c->time_base);
+        ost->samples_count += dst_nb_samples;
+    }
+
+    ret = avcodec_encode_audio2(c, &pkt, frame, &got_packet);
+    if (ret < 0) {
+//        fprintf(stderr, "Error encoding audio frame: %s\n", av_err2str(ret));
+        LOGI("Error encoding audio frame: %s\n", av_err2str(ret));
+        exit(1);
+    }
+
+    if (got_packet) {
+        LOGI("==========get audio packet");
+
+        pkt.stream_index = ost->st->index;
+
+        AVRational time_base=oc->streams[ost->st->index]->time_base;
+
+        //��ʾһ��30֡
+        AVRational r_framerate1 = {c->sample_rate, 1 };
+        AVRational time_base_q = AV_TIME_BASE_Q;
+
+        //Duration between 2 frames (us)��֮֡���ʱ����������ĵ�λ��΢��
+        int64_t calc_duration = (double)(AV_TIME_BASE)*(1 / av_q2d(r_framerate1));	//�ڲ�ʱ���
+
+/*		enc_pkt_a.pts = av_rescale_q(nb_samples*calc_duration, time_base_q, time_base);
+		enc_pkt_a.dts=enc_pkt_a.pts;
+		enc_pkt_a.duration = av_rescale_q(calc_duration, time_base_q, time_base);*/
+
+        //Parameters
+        int64_t timett = av_gettime();
+        int64_t now_time = timett - start_time;
+        pkt.pts = av_rescale_q(now_time, time_base_q, time_base);;
+        pkt.dts=pkt.pts;
+        pkt.duration = av_rescale_q(calc_duration, time_base_q, time_base);
+
+        pkt.pos = -1;
+
+        /* Write the compressed frame to the media file. */
+//        log_packet(oc, &pkt);
+//        ret = av_interleaved_write_frame(oc, &pkt);
+        ret = writeData(oc, &pkt);
 
 //        ret = write_frame(oc, &c->time_base, ost->st, &pkt);
         if (ret < 0) {
@@ -593,7 +738,7 @@ static int write_video_frame(AVFormatContext *oc, OutputStream *ost,jbyte* yuv)
         pkt.stream_index = ost->st->index;
         AVRational time_base=oc->streams[0]->time_base;
 
-        AVRational r_framerate1 = {30, 1 };
+        AVRational r_framerate1 = {STREAM_FRAME_RATE, 1 };
         AVRational time_base_q = AV_TIME_BASE_Q;
 
         int64_t calc_duration = (double)(AV_TIME_BASE)*(1 / av_q2d(r_framerate1));
@@ -607,6 +752,7 @@ static int write_video_frame(AVFormatContext *oc, OutputStream *ost,jbyte* yuv)
         pkt.duration = av_rescale_q(calc_duration, time_base_q, time_base);
 
         pkt.pos = -1;
+
 
         /*if(pkt.pts==AV_NOPTS_VALUE){
             //Write PTS
@@ -625,7 +771,7 @@ static int write_video_frame(AVFormatContext *oc, OutputStream *ost,jbyte* yuv)
         if (pts_time > now_time)
             av_usleep(pts_time - now_time);*/
 
-//        pkt.pts = av_rescale_q_rnd(pkt.pts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+//        pkt.pts = av_rescale_q_rnd(pkt.pts, ost->st->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
 //        pkt.dts = av_rescale_q_rnd(pkt.dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
 //        pkt.duration = av_rescale_q(pkt.duration, in_stream->time_base, out_stream->time_base);
 //        pkt.pos = -1;
@@ -635,9 +781,10 @@ static int write_video_frame(AVFormatContext *oc, OutputStream *ost,jbyte* yuv)
 
         frame_index++;
 
-        log_packet(oc, &pkt);
-
-        ret = av_interleaved_write_frame(oc, &pkt);
+//        log_packet(oc, &pkt);
+//
+//        ret = av_interleaved_write_frame(oc, &pkt);
+        ret = writeData(oc, &pkt);
 
 //        ret = write_frame(oc, &c->time_base, ost->st, &pkt);
     } else {
@@ -655,6 +802,7 @@ static int write_video_frame(AVFormatContext *oc, OutputStream *ost,jbyte* yuv)
 
 static void close_stream(AVFormatContext *oc, OutputStream *ost)
 {
+    pthread_mutex_destroy(&testlock);
     avcodec_free_context(&ost->enc);
     av_frame_free(&ost->frame);
     av_frame_free(&ost->tmp_frame);
@@ -764,6 +912,7 @@ int init(char *outputfilename)
         return 1;
     }
 
+    pthread_mutex_init(&testlock, NULL);
 //    start_time = av_gettime();
 }
 int initStartTime(){
@@ -774,6 +923,10 @@ int sendVideo(jbyte* yuv){
 }
 int sendAudio(jbyte* au,int size){
     write_audio_frame(oc, &audio_st, au,size );
+}
+
+int sendAudioShort(jshort* au,int shortsize){
+    write_audio_frame_short(oc, &audio_st, au,shortsize );
 }
 
 int destroy(){

@@ -125,6 +125,20 @@ Java_com_soul_learn_ffmpegsharelib_jniUtils_StreamHelper_sendAudio(JNIEnv *env, 
 
 extern "C"
 JNIEXPORT jint JNICALL
+Java_com_soul_learn_ffmpegsharelib_jniUtils_StreamHelper_sendAudioShort(JNIEnv *env, jclass type,
+                                                                   jshortArray audiodata_,
+                                                                   jint size) {
+    jshort *audiodata = env->GetShortArrayElements(audiodata_, NULL);
+
+    // TODO
+    sendAudioShort(audiodata, size);
+
+    env->ReleaseShortArrayElements(audiodata_, audiodata, 0);
+    return 0;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
 Java_com_soul_learn_ffmpegsharelib_jniUtils_StreamHelper_destroy(JNIEnv *env, jclass type) {
 
     // TODO
